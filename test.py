@@ -158,7 +158,32 @@ with torch.no_grad():
 
 
         if args.save_images:
-            utils.save_img(rgb_restored*255.0, os.path.join(args.result_dir, filenames[0]))
+            # compare images
+            image = rgb_restored * 255.0
+            reference_path = "./expected/expected_image.png"
+            expected = cv2.imread(reference_path, cv2.IMREAD_COLOR)
+            expected = cv2.cvtColor(expected, cv2.COLOR_BGR2RGB)
+
+            if image.shape != expected.shape:
+                expected = cv2.resize(expected, (image.shape[1], image.shape[0]))
+            
+            diff = np.abs(image - expected)
+            print(f"Максимальное расхождение: {np.max(diff)}")
+            print(f"Среднее расхождение: {np.mean(diff)}")
+
+            tolerance = 0.35
+            diff = np.abs(image - expected)
+            matches = np.sum(diff <= tolerance)
+
+            total_pixels = image.shape[0] * image.shape[1] * 3
+
+            match_count = matches
+            match_percent = (matches / total_pixels) * 100
+
+            print(f"Совпавших пикселей: {match_count} из {total_pixels} ({match_percent:.2f}%)")
+            
+            # save image
+            utils.save_img(image, os.path.join(args.result_dir, filenames[0]))
 
 if args.cal_metrics:
     psnr_val_rgb = sum(psnr_val_rgb)/len(test_dataset)
